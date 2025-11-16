@@ -10,24 +10,17 @@ interface IERC20 {
 
 contract HyprRouter {
     address public owner;
-    address constant LEND = 0x0000000000000000000000000000000000000001;
-    address constant DEX = 0x0000000000000000000000000000000000000002;
+    address constant HYPERLEND = 0xb88339CB7199b77E23DB6E890353E22632Ba630f;
+    address constant USDC_POOL = 0x4C7B17c8b4F3FF766889Aaf2ac5a6Db565FD61a9;
+    address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     
     constructor() { owner = msg.sender; }
     modifier onlyOwner() { require(msg.sender == owner, "O"); _; }
     
-    function executeArb(address tokenA, address tokenB, uint256 amountIn, bytes32[] calldata path, uint256 minProfit) external onlyOwner returns (uint256 profit) {
-        uint256 balanceBeforeA = IERC20(tokenA).balanceOf(address(this));
-        IHyperLend(LEND).flashLoan(tokenA, amountIn, "");
-        uint256 borrowed = IERC20(tokenA).balanceOf(address(this)) - balanceBeforeA;
-        
-        uint256 balanceBeforeB = IERC20(tokenB).balanceOf(address(this));
-        for (uint256 i = 0; i < path.length; i++) {
-            (address pool, bool zeroToOne) = (address(uint160(uint256(path[i]))), uint256(path[i])>>160 == 1);
-            IHyperDEX(DEX).swap(pool, borrowed, 0);
-        }
-        profit = IERC20(tokenB).balanceOf(address(this)) - balanceBeforeB;
+    function executeArb(uint256 amountIn, uint256 minProfit) external onlyOwner returns (uint256 profit) {
+        uint256 balanceBefore = IERC20(USDC).balanceOf(address(this));
+        IHyperLend(HYPERLEND).flashLoan(USDC, amountIn, "");
+        profit = IERC20(USDC).balanceOf(address(this)) - balanceBefore;
         require(profit > minProfit, "P");
-        IERC20(tokenA).transfer(LEND, borrowed);
     }
 }
